@@ -1,7 +1,7 @@
 <template>
   <div :class="accordionClasses">
     <div 
-      v-for="(item, index) in items"
+      v-for="(item, index) in content.items"
       :key="`accordion-item-${index}`"
       :class="accordionItemClasses"
     >
@@ -74,12 +74,12 @@ export default {
   emits: ['update:modelValue', 'change'],
   setup(props, { emit }) {
     const openItems = ref(
-      props.modelValue.length > 0 ? [...props.modelValue] : [...props.defaultOpenItems]
+      props.modelValue.length > 0 ? [...props.modelValue] : [...props.content.defaultOpenItems]
     )
 
     const accordionClasses = computed(() => cn(
       "w-full",
-      props.customClasses
+      props.content.customClasses
     ))
 
     const accordionItemClasses = computed(() => cn(
@@ -106,9 +106,9 @@ export default {
     const toggleItem = (index) => {
       const isOpen = openItems.value.includes(index)
       
-      if (props.type === 'single') {
+      if (props.content.type === 'single') {
         // Single mode: only one item can be open
-        if (isOpen && props.collapsible) {
+        if (isOpen && props.content.collapsible) {
           openItems.value = []
         } else if (!isOpen) {
           openItems.value = [index]
@@ -130,8 +130,8 @@ export default {
       })
 
       // Execute Weweb workflow if defined
-      if (props.changeWorkflowId && typeof wwLib !== 'undefined') {
-        wwLib.executeWorkflow(props.changeWorkflowId)
+      if (props.content.changeWorkflowId && typeof wwLib !== 'undefined') {
+        wwLib.executeWorkflow(props.content.changeWorkflowId)
       }
     }
 
@@ -162,12 +162,12 @@ export default {
     }
 
     const focusNextItem = (currentIndex) => {
-      const nextIndex = (currentIndex + 1) % props.items.length
+      const nextIndex = (currentIndex + 1) % props.content.items.length
       document.getElementById(`trigger-${nextIndex}`)?.focus()
     }
 
     const focusPreviousItem = (currentIndex) => {
-      const prevIndex = currentIndex === 0 ? props.items.length - 1 : currentIndex - 1
+      const prevIndex = currentIndex === 0 ? props.content.items.length - 1 : currentIndex - 1
       document.getElementById(`trigger-${prevIndex}`)?.focus()
     }
 
@@ -176,7 +176,7 @@ export default {
     }
 
     const focusLastItem = () => {
-      const lastIndex = props.items.length - 1
+      const lastIndex = props.content.items.length - 1
       document.getElementById(`trigger-${lastIndex}`)?.focus()
     }
 

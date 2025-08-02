@@ -30,15 +30,10 @@ export default {
   },
   triggerEvents: [
     {
-      name: "change",
+      name: "trigger-event",
       label: { en: "On change", fr: "Au changement" },
       event: { value: "" },
       default: true
-    },
-    {
-      name: "item-click",
-      label: { en: "On item click", fr: "Au clic d'élément" },
-      event: { value: "" }
     }
   ],
   properties: {

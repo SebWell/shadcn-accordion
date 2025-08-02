@@ -1,23 +1,23 @@
 <template>
-  <div :class="accordionClasses">
+  <div class="ww-accordion">
     <div 
       v-for="(item, index) in content.items"
       :key="`accordion-item-${index}`"
-      :class="accordionItemClasses"
+      class="accordion-item"
     >
       <!-- Accordion Header/Trigger -->
       <div class="accordion-header">
         <button
-          :class="accordionTriggerClasses"
+          class="accordion-trigger"
           :aria-expanded="openItems.includes(index)"
           :aria-controls="`content-${index}`"
           :id="`trigger-${index}`"
           @click="toggleItem(index)"
           @keydown="handleKeyDown($event, index)"
         >
-          <span class="accordion-title">{{ item.title }}</span>
+          <span class="accordion-title">{{ item.title || 'Accordion Item' }}</span>
           <svg 
-            :class="getChevronClasses(index)"
+            :class="['accordion-chevron', { 'accordion-chevron-open': openItems.includes(index) }]"
             viewBox="0 0 24 24" 
             fill="none" 
             stroke="currentColor" 
@@ -31,14 +31,13 @@
       <!-- Accordion Content -->
       <div
         v-show="openItems.includes(index)"
-        :class="accordionContentClasses"
+        class="accordion-content"
         :id="`content-${index}`"
         :aria-labelledby="`trigger-${index}`"
         role="region"
       >
         <div class="accordion-body">
-          <div v-if="item.content" v-html="item.content" />
-          <slot v-else :name="`item-${index}`" :item="item" />
+          <div v-html="item.content || 'Content for accordion item'"></div>
         </div>
       </div>
     </div>
@@ -46,224 +45,227 @@
 </template>
 
 <script>
-import { computed, ref } from 'vue'
-
 export default {
   name: 'ShadcnAccordion',
   props: {
-    content: {
-      type: Object,
-      required: true,
-      default: () => ({
-        type: 'single',
-        collapsible: true,
-        defaultOpenItems: [],
-        items: [
-          { title: 'Section 1', content: 'Content for section 1' },
-          { title: 'Section 2', content: 'Content for section 2' },
-          { title: 'Section 3', content: 'Content for section 3' }
-        ]
-      })
-    },
-    wwEditorState: { type: Object, required: true }
+    content: { type: Object, required: true },
+    wwElementState: { type: Object, required: true },
+    /* wwEditor:start */
+    wwEditorState: { type: Object, required: true },
+    /* wwEditor:end */
   },
-  emits: ['trigger-event', 'change', 'item-click'],
-  setup(props, { emit }) {
-    const openItems = ref([...props.content.defaultOpenItems])
-
-    const accordionClasses = computed(() => {
-      return 'accordion-container'
-    })
-
-    const accordionItemClasses = computed(() => {
-      return 'accordion-item'
-    })
-
-    const accordionTriggerClasses = computed(() => {
-      return 'accordion-trigger'
-    })
-
-    const accordionContentClasses = computed(() => {
-      return 'accordion-content'
-    })
-
-    const getChevronClasses = (index) => {
-      return `accordion-chevron ${openItems.value.includes(index) ? 'accordion-chevron-open' : ''}`
+  emits: ['trigger-event'],
+  data() {
+    return {
+      openItems: [...(this.content.defaultOpenItems || [])]
     }
-
-    const toggleItem = (index) => {
-      const isOpen = openItems.value.includes(index)
+  },
+  methods: {
+    toggleItem(index) {
+      const isOpen = this.openItems.includes(index)
       
-      if (props.content.type === 'single') {
-        // Single mode: only one item can be open
-        if (isOpen && props.content.collapsible) {
-          openItems.value = []
+      if (this.content.type === 'single') {
+        if (isOpen && this.content.collapsible) {
+          this.openItems = []
         } else if (!isOpen) {
-          openItems.value = [index]
+          this.openItems = [index]
         }
       } else {
-        // Multiple mode: multiple items can be open
         if (isOpen) {
-          openItems.value = openItems.value.filter(i => i !== index)
+          this.openItems = this.openItems.filter(i => i !== index)
         } else {
-          openItems.value = [...openItems.value, index]
+          this.openItems = [...this.openItems, index]
         }
       }
 
-      emit('change', { 
-        openItems: [...openItems.value], 
-        toggledItem: index, 
-        isOpen: !isOpen 
-      })
-      
-      emit('item-click', {
-        item: props.content.items[index],
-        index,
-        isOpen: !isOpen
-      })
-
-      // Trigger WeWeb event
-      emit('trigger-event', {
-        domEvent: null,
-        value: {
-          openItems: [...openItems.value],
+      this.$emit('trigger-event', {
+        name: 'change',
+        event: {
+          openItems: [...this.openItems],
           toggledItem: index,
-          item: props.content.items[index]
+          item: this.content.items[index],
+          isOpen: !isOpen
         }
       })
-    }
+    },
 
-    const handleKeyDown = (event, index) => {
+    handleKeyDown(event, index) {
       switch (event.key) {
         case 'Enter':
         case ' ':
           event.preventDefault()
-          toggleItem(index)
+          this.toggleItem(index)
           break
         case 'ArrowDown':
           event.preventDefault()
-          focusNextItem(index)
+          this.focusNextItem(index)
           break
         case 'ArrowUp':
           event.preventDefault()
-          focusPreviousItem(index)
+          this.focusPreviousItem(index)
           break
         case 'Home':
           event.preventDefault()
-          focusFirstItem()
+          this.focusFirstItem()
           break
         case 'End':
           event.preventDefault()
-          focusLastItem()
+          this.focusLastItem()
           break
       }
-    }
+    },
 
-    const focusNextItem = (currentIndex) => {
-      const nextIndex = (currentIndex + 1) % props.content.items.length
+    focusNextItem(currentIndex) {
+      const nextIndex = (currentIndex + 1) % this.content.items.length
       document.getElementById(`trigger-${nextIndex}`)?.focus()
-    }
+    },
 
-    const focusPreviousItem = (currentIndex) => {
-      const prevIndex = currentIndex === 0 ? props.content.items.length - 1 : currentIndex - 1
+    focusPreviousItem(currentIndex) {
+      const prevIndex = currentIndex === 0 ? this.content.items.length - 1 : currentIndex - 1
       document.getElementById(`trigger-${prevIndex}`)?.focus()
-    }
+    },
 
-    const focusFirstItem = () => {
+    focusFirstItem() {
       document.getElementById('trigger-0')?.focus()
-    }
+    },
 
-    const focusLastItem = () => {
-      const lastIndex = props.content.items.length - 1
+    focusLastItem() {
+      const lastIndex = this.content.items.length - 1
       document.getElementById(`trigger-${lastIndex}`)?.focus()
-    }
-
-    return {
-      openItems,
-      accordionClasses,
-      accordionItemClasses,
-      accordionTriggerClasses,
-      accordionContentClasses,
-      getChevronClasses,
-      toggleItem,
-      handleKeyDown
     }
   }
 }
 </script>
 
-<style scoped>
-/* Variables CSS Shadcn/UI */
+<style>
+/* ===== SHADCN UI CSS VARIABLES ===== */
+
+/* Shadcn UI Variables */
 :root {
-  --border: hsl(214.3, 31.8%, 91.4%);
-  --foreground: hsl(222.2, 84%, 4.9%);
-  --muted-foreground: hsl(215.4, 16.3%, 46.9%);
-  --background: hsl(0, 0%, 100%);
-  --ring: hsl(222.2, 84%, 4.9%);
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --primary: 222.2 47.4% 11.2%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 222.2 84% 4.9%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 210 40% 96%;
+  --accent-foreground: 222.2 84% 4.9%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 222.2 84% 4.9%;
+  --radius: 0.5rem;
 }
 
-/* Accordion Styles */
-.accordion-container {
+.dark {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --primary: 210 40% 98%;
+  --primary-foreground: 222.2 47.4% 11.2%;
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 217.2 32.6% 17.5%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
+  --ring: 212.7 26.8% 83.9%;
+}
+
+/* ===== ACCORDION STYLES - EXACTEMENT COMME SHADCN UI ===== */
+
+.ww-accordion {
   width: 100%;
+  font-family: inherit;
+  color: hsl(var(--foreground));
 }
 
-.accordion-item {
-  border-bottom: 1px solid var(--border);
+.ww-accordion .accordion-item {
+  border-bottom: 1px solid hsl(var(--border));
 }
 
-.accordion-header {
+.ww-accordion .accordion-item:first-child {
+  border-top: 1px solid hsl(var(--border));
+}
+
+.ww-accordion .accordion-header {
   display: flex;
 }
 
-.accordion-trigger {
+.ww-accordion .accordion-trigger {
   display: flex;
   flex: 1;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 0;
+  padding: 1rem 0;
   font-weight: 500;
-  transition: all 0.2s;
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
   text-align: left;
-  background: none;
+  background: transparent;
   border: none;
   cursor: pointer;
-  color: var(--foreground);
+  color: hsl(var(--foreground));
+  font-family: inherit;
+  font-size: inherit;
+  line-height: 1.5;
 }
 
-.accordion-trigger:hover {
+.ww-accordion .accordion-trigger:hover {
   text-decoration: underline;
+  text-underline-offset: 4px;
 }
 
-.accordion-trigger:focus-visible {
+.ww-accordion .accordion-trigger:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--ring);
-  border-radius: 4px;
+  box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--ring));
+  border-radius: calc(var(--radius) - 2px);
 }
 
-.accordion-title {
+.ww-accordion .accordion-trigger:disabled {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.ww-accordion .accordion-title {
   flex: 1;
   text-align: left;
+  font-weight: inherit;
 }
 
-.accordion-chevron {
-  height: 16px;
-  width: 16px;
+.ww-accordion .accordion-chevron {
+  height: 1rem;
+  width: 1rem;
   flex-shrink: 0;
-  transition: transform 0.2s;
+  transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  color: hsl(var(--muted-foreground));
 }
 
-.accordion-chevron-open {
+.ww-accordion .accordion-chevron-open {
   transform: rotate(180deg);
 }
 
-.accordion-content {
+.ww-accordion .accordion-content {
   overflow: hidden;
-  font-size: 14px;
-  transition: all 0.2s;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: hsl(var(--foreground));
 }
 
-.accordion-body {
-  padding-bottom: 16px;
+.ww-accordion .accordion-body {
+  padding-bottom: 1rem;
   padding-top: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Animations pour le contenu */
+.ww-accordion .accordion-content {
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 </style> 
